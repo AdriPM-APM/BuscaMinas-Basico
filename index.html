@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,6 +63,8 @@
             font-weight: bold;
             font-family: Arial, sans-serif;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .cell.revealed {
             background: #e0e0e0;
@@ -90,148 +92,48 @@
     </style>
 </head>
 <body>
-    <div class="minesweeper">
-        <div class="header">
-            <div id="scoreCount">000</div>
-            <div class="smiley" id="smiley">😊</div>
-            <div id="timer">000</div>
-        </div>
-        <div class="board" id="board"></div>
+<div class="minesweeper">
+    <div class="header">
+        <div id="scoreCount">000</div>
+        <div class="smiley" id="smiley">😊</div>
+        <div id="timer">000</div>
     </div>
-    <script>
-        const boardElement = document.getElementById('board');
-        const scoreCountElement = document.getElementById('scoreCount');
-        const smileyElement = document.getElementById('smiley');
+    <div class="board" id="board"></div>
+</div>
+<script>
+const boardElement = document.getElementById('board');
+const scoreCountElement = document.getElementById('scoreCount');
+const smileyElement = document.getElementById('smiley');
 
-        const rows = 10;
-        const cols = 10;
-        const bombs = 10;
-        let board = [];
-        let gameover = false;
-        let score = 0; // Clics en casillas sin bomba
+const rows = 10;
+const cols = 10;
+const bombs = 10;
+let board = [];
+let gameover = false;
+let score = 0;
 
-        function createBoard() {
-            board = Array.from({ length: rows }, () =>
-                Array.from({ length: cols }, () => ({
-                    bomb: false,
-                    revealed: false,
-                    number: 0,
-                    flag: null
-                }))
-            );
-            let bombsPlaced = 0;
-            while (bombsPlaced < bombs) {
-                const row = Math.floor(Math.random() * rows);
-                const col = Math.floor(Math.random() * cols);
-                if (!board[row][col].bomb) {
-                    board[row][col].bomb = true;
-                    bombsPlaced++;
-                }
-            }
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    if (!board[row][col].bomb) {
-                        let count = 0;
-                        for (let r = -1; r <= 1; r++) {
-                            for (let c = -1; c <= 1; c++) {
-                                if (
-                                    row + r >= 0 &&
-                                    row + r < rows &&
-                                    col + c >= 0 &&
-                                    col + c < cols &&
-                                    board[row + r][col + c].bomb
-                                ) {
-                                    count++;
-                                }
-                            }
-                        }
-                        board[row][col].number = count;
-                    }
-                }
-            }
-            score = 0;
-            updateScore();
-            renderBoard();
+function createBoard() {
+    board = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => ({
+            bomb: false,
+            revealed: false,
+            number: 0,
+            flag: null // null | 'flag' | 'question'
+        }))
+    );
+    let bombsPlaced = 0;
+    while (bombsPlaced < bombs) {
+        const row = Math.floor(Math.random() * rows);
+        const col = Math.floor(Math.random() * cols);
+        if (!board[row][col].bomb) {
+            board[row][col].bomb = true;
+            bombsPlaced++;
         }
-
-        function renderBoard() {
-            boardElement.innerHTML = '';
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    if (board[row][col].revealed) {
-                        cell.classList.add('revealed');
-                        if (board[row][col].bomb) {
-                            cell.classList.add('bomb');
-                            cell.textContent = '💣';
-                        } else if (board[row][col].number > 0) {
-                            cell.classList.add('number');
-                            cell.textContent = board[row][col].number;
-                        }
-                    } else if (board[row][col].flag === 'flag') {
-                        cell.textContent = '🚩';
-                    } else if (board[row][col].flag === 'question') {
-                        cell.textContent = '❓';
-                    }
-                    // Mantener pulsado para alternar marca
-                    let pressTimer = null;
-                    cell.addEventListener('mousedown', (event) => {
-                        if (gameover || board[row][col].revealed) return;
-                        if (event.button === 0) {
-                            pressTimer = setTimeout(() => {
-                                handleFlagCycle(row, col);
-                            }, 400);
-                        }
-                    });
-                    cell.addEventListener('mouseup', (event) => {
-                        if (pressTimer) clearTimeout(pressTimer);
-                        // Solo revelar en click normal, no si hay bandera o interrogación
-                        if (event.button === 0 && !gameover && !board[row][col].revealed && !board[row][col].flag) {
-                            revealCell(row, col);
-                        }
-                    });
-                    cell.addEventListener('mouseleave', () => {
-                        if (pressTimer) clearTimeout(pressTimer);
-                    });
-                    boardElement.appendChild(cell);
-                }
-            }
-        }
-
-        function handleFlagCycle(row, col) {
-            // Solo alternar si no está revelada
-            if (board[row][col].revealed) return;
-            // Ciclo: vacío -> bandera -> ? -> vacío
-            if (!board[row][col].flag) {
-                board[row][col].flag = 'flag';
-            } else if (board[row][col].flag === 'flag') {
-                board[row][col].flag = 'question';
-            } else if (board[row][col].flag === 'question') {
-                board[row][col].flag = null;
-            }
-            renderBoard();
-            checkWin();
-        }
-
-        function updateScore() {
-            scoreCountElement.textContent = String(score).padStart(3, '0');
-        }
-
-        function revealCell(row, col) {
-            if (board[row][col].revealed || board[row][col].flag || gameover) return;
-            board[row][col].revealed = true;
-            if (board[row][col].bomb) {
-                gameover = true;
-                smileyElement.textContent = '😵';
-                renderBoard();
-                alert('¡Boom! Perdiste.');
-                revealAll();
-                return;
-            }
-            score++;
-            updateScore();
-            if (board[row][col].number === 0) {
+    }
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            if (!board[row][col].bomb) {
+                let count = 0;
                 for (let r = -1; r <= 1; r++) {
                     for (let c = -1; c <= 1; c++) {
                         if (
@@ -239,53 +141,188 @@
                             row + r < rows &&
                             col + c >= 0 &&
                             col + c < cols &&
-                            !(r === 0 && c === 0)
+                            board[row + r][col + c].bomb
                         ) {
-                            // Solo contar el score en la recursividad si la celda no es bomba y no fue clicada antes
-                            if (!board[row + r][col + c].revealed && !board[row + r][col + c].bomb && !board[row + r][col + c].flag) {
-                                revealCell(row + r, col + c);
-                            }
+                            count++;
                         }
                     }
                 }
+                board[row][col].number = count;
             }
-            renderBoard();
-            checkWin();
         }
+    }
+    score = 0;
+    gameover = false;
+    smileyElement.textContent = '😊';
+    updateScore();
+    renderBoard();
+}
 
-        function revealAll() {
-            for (let row = 0; row < rows; row++)
-                for (let col = 0; col < cols; col++)
-                    board[row][col].revealed = true;
-            renderBoard();
+function renderBoard() {
+    boardElement.innerHTML = '';
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            if (board[row][col].revealed) {
+                cell.classList.add('revealed');
+                if (board[row][col].bomb) {
+                    cell.classList.add('bomb');
+                    cell.textContent = '💣';
+                } else if (board[row][col].number > 0) {
+                    cell.classList.add('number');
+                    cell.textContent = board[row][col].number;
+                }
+            } else if (board[row][col].flag === 'flag') {
+                cell.textContent = '🚩';
+            } else if (board[row][col].flag === 'question') {
+                cell.textContent = '❓';
+            }
+            // --- PC: Clic izquierdo/revela. Clic derecho/ciclo de marca ---
+            cell.oncontextmenu = (e) => { // PC, clic derecho
+                e.preventDefault();
+                if (gameover || board[row][col].revealed) return;
+                handleFlagCycle(row, col);
+            };
+            cell.addEventListener('mousedown', (event) => {
+                if (gameover || board[row][col].revealed) return;
+                // Sólo para PC, clic izquierdo
+                if (event.button === 0) {
+                    // Para móvil, iniciar temporizador de mantener pulsado
+                    cell._longPressTimer = setTimeout(() => {
+                        handleFlagCycle(row, col);
+                        cell._longPressTimer = null;
+                    }, 400);
+                }
+            });
+            cell.addEventListener('mouseup', (event) => {
+                if (cell._longPressTimer) {
+                    clearTimeout(cell._longPressTimer);
+                    cell._longPressTimer = null;
+                    // Si es PC, y no fue long-press, entonces revela
+                    if (event.button === 0 && !gameover && !board[row][col].revealed && !board[row][col].flag) {
+                        revealCell(row, col);
+                    }
+                }
+            });
+            cell.addEventListener('mouseleave', () => {
+                if (cell._longPressTimer) {
+                    clearTimeout(cell._longPressTimer);
+                    cell._longPressTimer = null;
+                }
+            });
+            // --- Móvil: touchstart/touchend long-press para ciclo, tap revela ---
+            cell.addEventListener('touchstart', (e) => {
+                if (gameover || board[row][col].revealed) return;
+                cell._touchMoved = false;
+                cell._touchLongPress = setTimeout(() => {
+                    handleFlagCycle(row, col);
+                    cell._touchLongPress = null;
+                }, 400);
+            }, {passive: true});
+            cell.addEventListener('touchmove', (e) => {
+                cell._touchMoved = true;
+                if (cell._touchLongPress) {
+                    clearTimeout(cell._touchLongPress);
+                    cell._touchLongPress = null;
+                }
+            });
+            cell.addEventListener('touchend', (e) => {
+                if (cell._touchLongPress) {
+                    clearTimeout(cell._touchLongPress);
+                    cell._touchLongPress = null;
+                    // Si es tap (no longpress ni movimiento), revela
+                    if (!gameover && !board[row][col].revealed && !board[row][col].flag && !cell._touchMoved) {
+                        revealCell(row, col);
+                    }
+                }
+            });
+            boardElement.appendChild(cell);
         }
+    }
+}
 
-        function checkWin() {
-            let win = true;
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const cell = board[row][col];
-                    // Las bombas deben tener bandera, y las no bombas deben estar reveladas
-                    if ((cell.bomb && cell.flag !== 'flag') || (!cell.bomb && !cell.revealed)) {
-                        win = false;
+function handleFlagCycle(row, col) {
+    if (board[row][col].revealed || gameover) return;
+    if (!board[row][col].flag) {
+        board[row][col].flag = 'flag';
+    } else if (board[row][col].flag === 'flag') {
+        board[row][col].flag = 'question';
+    } else if (board[row][col].flag === 'question') {
+        board[row][col].flag = null;
+    }
+    renderBoard();
+    checkWin();
+}
+
+function updateScore() {
+    scoreCountElement.textContent = String(score).padStart(3, '0');
+}
+
+function revealCell(row, col) {
+    if (board[row][col].revealed || board[row][col].flag || gameover) return;
+    board[row][col].revealed = true;
+    if (board[row][col].bomb) {
+        gameover = true;
+        smileyElement.textContent = '😵';
+        renderBoard();
+        alert('¡Boom! Perdiste.');
+        revealAll();
+        return;
+    }
+    score++;
+    updateScore();
+    if (board[row][col].number === 0) {
+        for (let r = -1; r <= 1; r++) {
+            for (let c = -1; c <= 1; c++) {
+                if (
+                    row + r >= 0 &&
+                    row + r < rows &&
+                    col + c >= 0 &&
+                    col + c < cols &&
+                    !(r === 0 && c === 0)
+                ) {
+                    if (!board[row + r][col + c].revealed && !board[row + r][col + c].bomb && !board[row + r][col + c].flag) {
+                        revealCell(row + r, col + c);
                     }
                 }
             }
-            if (win && !gameover) {
-                gameover = true;
-                smileyElement.textContent = '😎';
-                renderBoard();
-                alert('¡Felicidades! ¡Ganaste!');
+        }
+    }
+    renderBoard();
+    checkWin();
+}
+
+function revealAll() {
+    for (let row = 0; row < rows; row++)
+        for (let col = 0; col < cols; col++)
+            board[row][col].revealed = true;
+    renderBoard();
+}
+
+function checkWin() {
+    let win = true;
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const cell = board[row][col];
+            if ((cell.bomb && cell.flag !== 'flag') || (!cell.bomb && !cell.revealed)) {
+                win = false;
             }
         }
+    }
+    if (win && !gameover) {
+        gameover = true;
+        smileyElement.textContent = '😎';
+        renderBoard();
+        alert('¡Felicidades! ¡Ganaste!');
+    }
+}
 
-        smileyElement.addEventListener('click', () => {
-            gameover = false;
-            smileyElement.textContent = '😊';
-            createBoard();
-        });
+smileyElement.addEventListener('click', () => {
+    createBoard();
+});
 
-        createBoard();
-    </script>
+createBoard();
+</script>
 </body>
 </html>
